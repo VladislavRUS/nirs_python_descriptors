@@ -8,17 +8,19 @@ from matplotlib.mlab import PCA
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import svm
 from time import gmtime, strftime
+from scipy import ndimage
+
 
 def get_error_prob(classes, predictions, examples_number):
     assert len(classes) == len(predictions)
 
-    erros = 0
+    errors = 0
 
     for i in range(0, len(classes)):
         if classes[i] != predictions[i]:
-            erros += 1
+            errors += 1
 
-    return erros / examples_number
+    return errors / examples_number
 
 
 def get_classes(class_params, samples_params):
@@ -35,8 +37,7 @@ def get_classes(class_params, samples_params):
 
 
 def AFS(vector_complex, vector_complex_base, max_val):
-
-    afs_type = 1
+    afs_type = 2
     output_sum = 0
     output_value = 0
     max_val_base_1 = 1.0 / max_val
@@ -49,25 +50,26 @@ def AFS(vector_complex, vector_complex_base, max_val):
         val = np.absolute(z)
         val_base = np.absolute(z_base)
 
-        ang = np.angle(z, deg=True)
-        ang_base = np.angle(z_base, deg=True)
+        ang = np.angle(z)
+        ang_base = np.angle(z_base)
 
         diff = ang - ang_base
 
-        if (diff < -180):
+        if diff < -180:
             diff = diff + 180
-        elif (diff > 180):
+
+        elif diff > 180:
             diff = diff - 180
 
-        angle_coef = 0.5 * (1 + math.cos(diff))
+        angle_coefficient = 0.5 * (1 + math.cos(diff))
 
-        if afs_type == 1: 
+        if afs_type == 1:
             val = val * (val_base * max_val_base_1)
 
-        elif afs_type == 2: 
+        elif afs_type == 2:
             val = val * (val_base * val_base * max_val_base_2)
 
-        output_value += angle_coef * val
+        output_value += angle_coefficient * val
         output_sum += val
 
     return output_value / output_sum
@@ -79,7 +81,7 @@ def calc_features(vector, eigen_vectors, features_number):
     feature = []
 
     for i in range(0, features_number):
-        feature.append(AFS(vector, eigen_vectors[i], max_value))
+        feature.append(AFS(np.conjugate(vector), eigen_vectors[:, i], max_value))
 
     return feature
 
@@ -88,36 +90,34 @@ def apply_pca(vectors, eigen_vectors, vec_mean, features_number):
     vectors = np.transpose(vectors)
 
     features = []
-    eigen_vectors = np.transpose(eigen_vectors)
 
-    for vector in vectors:
-        vector = np.subtract(vector, vec_mean)
-        features.append(calc_features(np.transpose(vector), eigen_vectors, features_number))
+    print(len(vectors))
+    cnt = 0
+
+    for i in range(0, len(vectors)):
+        print(cnt)
+        cnt = cnt + 1
+        vector = np.subtract(vectors[i, :], vec_mean)
+        features.append(calc_features(vector, eigen_vectors, features_number))
 
     return features
 
 
 def pca(vectors):
-    pca_results = PCA(vectors, standardize=False)
+    pca_results = PCA(vectors, standardize=True)
+    vec_mean = np.mean(np.transpose(vectors), axis=0)
 
-    eig_values = np.power(pca_results.s, -0.5)
-    diag = np.diag(eig_values)
-
-    eigen_vectors = np.dot(np.dot(vectors, pca_results.Wt), diag)
-    vectors =  np.transpose(vectors)
-
-    vec_mean = np.mean(vectors, axis=0)
-
-    return eigen_vectors, vec_mean
+    return pca_results.Y, vec_mean
 
 
 def image_2_vector(image):
-    [re, im] = np.gradient(image)
+    re = ndimage.sobel(image, axis=-1)
+    im = ndimage.sobel(image, axis=0)
 
     re = re.flatten()
     im = im.flatten()
 
-    return re + 1j * im
+    return re - 1j * im
 
 
 def scale_matrix(matrix, scale_factor):
@@ -158,6 +158,39 @@ def read_pgm(pgmf):
     return raster
 
 
+def matrixFromFile(fileName):
+    f = open(fileName, mode='r')
+    lines = f.readlines()
+
+    matrix = []
+    for line in lines:
+        line = line.replace('i', 'j').split(',')
+
+        row = []
+        for number in line:
+            row.append(complex(number))
+
+        matrix.append(row)
+
+    return np.array(matrix)
+
+
+def vecMeanFromFile():
+    fileName = 'vecMean.txt'
+
+    f = open(fileName, mode='r')
+
+    line = f.readlines()[0]
+
+    line = line.replace('i', 'j').split(',')
+
+    row = []
+    for number in line:
+        row.append(complex(number))
+
+    return np.array(row)
+
+
 def load_data(base_dir, class_params, samples_params):
     folders = os.listdir(base_dir)
     folders = folders[class_params['from']:class_params['to']]
@@ -176,15 +209,16 @@ def load_data(base_dir, class_params, samples_params):
 
     return np.transpose(np.array(vectors))
 
+
 def start():
     print('Start', strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
     base_dir = './CroppedYale'
-    class_params = {'from': 0, 'to': 5}
-    train_samples_params = {'from': 0, 'to': 8}
-    test_samples_params = {'from': 8, 'to': 10}
-    features_number = 4
-    classificator = 'KNN'
+    class_params = {'from': 0, 'to': 20}
+    train_samples_params = {'from': 0, 'to': 30}
+    test_samples_params = {'from': 30, 'to': 60}
+    features_number = 15
+    classifier = 'KNN'
 
     train_vectors = load_data(base_dir, class_params, train_samples_params)
     eigen_vectors, vec_mean = pca(train_vectors)
@@ -193,26 +227,28 @@ def start():
     test_vectors = load_data(base_dir, class_params, test_samples_params)
     test_features = apply_pca(test_vectors, eigen_vectors, vec_mean, features_number)
 
-    classes = get_classes(class_params, train_samples_params)
+    train_classes = get_classes(class_params, train_samples_params)
 
-    if classificator == 'KNN':
-        knn = KNeighborsClassifier(n_neighbors=4)
-        knn.fit(train_features, classes)
+    predictions = None
+
+    if classifier == 'KNN':
+        knn = KNeighborsClassifier(n_neighbors=3)
+        knn.fit(train_features, train_classes)
         predictions = knn.predict(test_features)
 
-    elif classificator == 'SVM':
+    elif classifier == 'SVM':
         clf = svm.SVC()
-        clf.fit(train_features, classes)  
+        clf.fit(train_features, train_classes)
         predictions = clf.predict(test_features)
 
-    print(classes)
-    print(get_classes(class_params, test_samples_params))
-    print(predictions)
+    print(features_number, classifier)
 
-    error_prob = get_error_prob(get_classes(class_params, test_samples_params), predictions, len(test_features))
+    test_classes = get_classes(class_params, test_samples_params)
+    error_prob = get_error_prob(test_classes, predictions, len(test_classes))
 
-    print(1 - error_prob)
+    print('True probability: ', 1 - error_prob)
 
     print('Finish', strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+
 
 start()
