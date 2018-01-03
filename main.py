@@ -7,8 +7,9 @@ import numpy as np
 from matplotlib.mlab import PCA
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import svm
-from time import gmtime, strftime
+from time import localtime, strftime
 from scipy import ndimage
+import scipy.misc
 
 
 def get_error_prob(classes, predictions, examples_number):
@@ -81,7 +82,7 @@ def calc_features(vector, eigen_vectors, features_number):
     feature = []
 
     for i in range(0, features_number):
-        feature.append(AFS(np.conjugate(vector), eigen_vectors[:, i], max_value))
+        feature.append(AFS(vector, eigen_vectors[:, i], max_value))
 
     return feature
 
@@ -117,7 +118,7 @@ def image_2_vector(image):
     re = re.flatten()
     im = im.flatten()
 
-    return re - 1j * im
+    return re + 1j * im
 
 
 def scale_matrix(matrix, scale_factor):
@@ -178,13 +179,13 @@ def load_data(base_dir, class_params, samples_params):
 
 
 def start():
-    print('Start', strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+    print('Start', strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
     base_dir = './CroppedYale'
-    class_params = {'from': 0, 'to': 10}
-    train_samples_params = {'from': 0, 'to': 10}
-    test_samples_params = {'from': 10, 'to': 20}
-    features_number = 5
+    class_params = {'from': 10, 'to': 20}
+    train_samples_params = {'from': 0, 'to': 5}
+    test_samples_params = {'from': 5, 'to': 10}
+    features_number = 6
     classifier = 'KNN'
 
     train_vectors = load_data(base_dir, class_params, train_samples_params)
@@ -215,7 +216,7 @@ def start():
 
     print('True probability: ', 1 - error_prob)
 
-    print('Finish', strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+    print('Finish', strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
 
 start()
