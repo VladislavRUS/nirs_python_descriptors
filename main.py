@@ -158,39 +158,6 @@ def read_pgm(pgmf):
     return raster
 
 
-def matrixFromFile(fileName):
-    f = open(fileName, mode='r')
-    lines = f.readlines()
-
-    matrix = []
-    for line in lines:
-        line = line.replace('i', 'j').split(',')
-
-        row = []
-        for number in line:
-            row.append(complex(number))
-
-        matrix.append(row)
-
-    return np.array(matrix)
-
-
-def vecMeanFromFile():
-    fileName = 'vecMean.txt'
-
-    f = open(fileName, mode='r')
-
-    line = f.readlines()[0]
-
-    line = line.replace('i', 'j').split(',')
-
-    row = []
-    for number in line:
-        row.append(complex(number))
-
-    return np.array(row)
-
-
 def load_data(base_dir, class_params, samples_params):
     folders = os.listdir(base_dir)
     folders = folders[class_params['from']:class_params['to']]
@@ -214,10 +181,10 @@ def start():
     print('Start', strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
     base_dir = './CroppedYale'
-    class_params = {'from': 0, 'to': 20}
-    train_samples_params = {'from': 0, 'to': 30}
-    test_samples_params = {'from': 30, 'to': 60}
-    features_number = 15
+    class_params = {'from': 0, 'to': 10}
+    train_samples_params = {'from': 0, 'to': 10}
+    test_samples_params = {'from': 10, 'to': 20}
+    features_number = 5
     classifier = 'KNN'
 
     train_vectors = load_data(base_dir, class_params, train_samples_params)
