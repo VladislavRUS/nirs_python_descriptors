@@ -9,7 +9,6 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn import svm
 from time import localtime, strftime
 from scipy import ndimage
-import scipy.misc
 
 
 def get_error_prob(classes, predictions, examples_number):
@@ -37,7 +36,7 @@ def get_classes(class_params, samples_params):
     return classes
 
 
-def AFS(vector_complex, vector_complex_base, max_val):
+def afs(vector_complex, vector_complex_base, max_val):
     afs_type = 2
     output_sum = 0
     output_value = 0
@@ -82,7 +81,7 @@ def calc_features(vector, eigen_vectors, features_number):
     feature = []
 
     for i in range(0, features_number):
-        feature.append(AFS(vector, eigen_vectors[:, i], max_value))
+        feature.append(afs(vector, eigen_vectors[:, i], max_value))
 
     return feature
 
@@ -125,8 +124,8 @@ def scale_matrix(matrix, scale_factor):
     width = len(matrix[0])
     height = len(matrix)
 
-    ver = math.floor(height / scale_factor)
-    hor = math.floor(width / scale_factor)
+    ver = int(math.floor(height / scale_factor))
+    hor = int(math.floor(width / scale_factor))
     coef = 1 / (math.pow(scale_factor, 2))
 
     result = np.zeros((ver, hor))
@@ -153,7 +152,7 @@ def read_pgm(pgmf):
     raster = []
     for y in range(height):
         row = []
-        for y in range(width):
+        for x in range(width):
             row.append(ord(pgmf.read(1)))
         raster.append(row)
     return raster
@@ -182,10 +181,10 @@ def start():
     print('Start', strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
     base_dir = './CroppedYale'
-    class_params = {'from': 10, 'to': 20}
+    class_params = {'from': 0, 'to': 5}
     train_samples_params = {'from': 0, 'to': 5}
     test_samples_params = {'from': 5, 'to': 10}
-    features_number = 6
+    features_number = 4
     classifier = 'KNN'
 
     train_vectors = load_data(base_dir, class_params, train_samples_params)
