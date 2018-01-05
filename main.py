@@ -9,6 +9,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn import svm
 from time import localtime, strftime
 from scipy import ndimage
+from skimage import exposure, img_as_float
+import scipy.misc
 
 
 def get_error_prob(classes, predictions, examples_number):
@@ -91,12 +93,9 @@ def apply_pca(vectors, eigen_vectors, vec_mean, features_number):
 
     features = []
 
-    print(len(vectors))
     cnt = 0
 
     for i in range(0, len(vectors)):
-        print(cnt)
-        cnt = cnt + 1
         vector = np.subtract(vectors[i, :], vec_mean)
         features.append(calc_features(vector, eigen_vectors, features_number))
 
@@ -171,28 +170,28 @@ def load_data(base_dir, class_params, samples_params):
         for image in images:
             pgmf = codecs.open(base_dir + '/' + folder + '/' + image, 'rb')
             raster = read_pgm(pgmf)
-            scaled = scale_matrix(raster, 2)
+            img_eq = exposure.equalize_hist(img_as_float(raster))
+            scaled = scale_matrix(img_eq, 2)
             vectors.append(image_2_vector(scaled))
 
     return np.transpose(np.array(vectors))
 
 
-def start():
-    print('Start', strftime("%Y-%m-%d %H:%M:%S", localtime()))
-
+def start(features_number):
     base_dir = './CroppedYale'
-    class_params = {'from': 0, 'to': 5}
-    train_samples_params = {'from': 0, 'to': 5}
-    test_samples_params = {'from': 5, 'to': 10}
-    features_number = 4
+    class_params = {'from': 0, 'to': 38}
+    train_samples_params = {'from': 0, 'to': 32}
+    test_samples_params = {'from': 32, 'to': 59}
     classifier = 'KNN'
 
     train_vectors = load_data(base_dir, class_params, train_samples_params)
     eigen_vectors, vec_mean = pca(train_vectors)
-    train_features = apply_pca(train_vectors, eigen_vectors, vec_mean, features_number)
+    train_features = apply_pca(
+        train_vectors, eigen_vectors, vec_mean, features_number)
 
     test_vectors = load_data(base_dir, class_params, test_samples_params)
-    test_features = apply_pca(test_vectors, eigen_vectors, vec_mean, features_number)
+    test_features = apply_pca(
+        test_vectors, eigen_vectors, vec_mean, features_number)
 
     train_classes = get_classes(class_params, train_samples_params)
 
@@ -208,14 +207,16 @@ def start():
         clf.fit(train_features, train_classes)
         predictions = clf.predict(test_features)
 
-    print(features_number, classifier)
-
     test_classes = get_classes(class_params, test_samples_params)
     error_prob = get_error_prob(test_classes, predictions, len(test_classes))
 
+    print(features_number, classifier)
     print('True probability: ', 1 - error_prob)
 
-    print('Finish', strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
+print('Start', strftime("%Y-%m-%d %H:%M:%S", localtime()))
 
-start()
+for features_number in [4, 8, 15, 50, 100]:
+    start(features_number)
+
+print('Finish', strftime("%Y-%m-%d %H:%M:%S", localtime()))
