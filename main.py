@@ -1,5 +1,10 @@
 """Image model descriptors"""
 
+import math
+from sklearn.neighbors import KNeighborsClassifier
+from scipy import misc
+from skimage import exposure
+import random
 import os
 import codecs
 import math
@@ -7,10 +12,8 @@ import numpy as np
 from matplotlib.mlab import PCA
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import svm
-from time import gmtime, strftime
 from scipy import ndimage
 from skimage import exposure, img_as_float
-import scipy.misc
 
 
 def get_error_prob(classes, predictions, examples_number):
@@ -93,12 +96,7 @@ def apply_pca(vectors, eigen_vectors, vec_mean, features_number):
 
     features = []
 
-    print(len(vectors))
-    cnt = 0
-
     for i in range(0, len(vectors)):
-        print(cnt)
-        cnt = cnt + 1
         vector = np.subtract(vectors[i, :], vec_mean)
         features.append(calc_features(vector, eigen_vectors, features_number))
 
@@ -199,24 +197,56 @@ def load_data(base_dir, class_params, samples_params):
 
     vectors = []
 
+    box_size = 30
+
     for folder in folders:
         images = os.listdir(base_dir + '/' + folder)
         images = images[samples_params['from']:samples_params['to']]
+        images = [img for img in images if img.endswith('.tif')]
 
         for image in images:
-            raster = ndimage.imread(base_dir + '/' + folder + '/' + image)
+            im_path = base_dir + '/' + folder + '/' + image
+            ext = image[image.rfind('.'):]
+            os.system("python poincare.py " + im_path + " 16 1 --smooth")
+
+            file_name = im_path.replace(ext, '.txt')
+
+            im_file = open(file_name, 'r')
+            coordinates = im_file.readline().split(':')
+            y = int(float(coordinates[0]))
+            x = int(float(coordinates[1]))
+            im_file.close()
+
+            raster = ndimage.imread(im_path)
+
+            # start = (x - box_size, y - box_size)
+            # end = (x + box_size, y + box_size)
+            # rr, cc = rectangle(start, end, extent=extent, shape=img.shape)
+            # raster[rr, cc] = 1
+
+            raster = raster[x - box_size: x + box_size, y - box_size: y + box_size]
+
+            # plt.imshow(np.uint8(raster))
+            # plt.show()
+            #
+            # return
+            #
+
+            print(image, x, y, box_size)
+            assert raster.size != 0
+
             img_eq = exposure.equalize_hist(img_as_float(raster))
-            scaled = scale_matrix(img_eq, 2)
-            vectors.append(image_2_vector(scaled))
+            # scaled = scale_matrix(img_eq, 2)
+            vectors.append(image_2_vector(img_eq))
+            misc.imsave("test_" + image + "_" + str(random.random()) + ".tif", raster)
+
+            print("Processed image: " + image)
 
     return np.transpose(np.array(vectors))
 
 
-def start(features_number):
-    print('Start', strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-
-    base_dir = './DB2_B'
-    class_params = {'from': 0, 'to': 8}
+def start(features_number, base_dir):
+    class_params = {'from': 0, 'to': 4}
     train_samples_params = {'from': 0, 'to': 4}
     test_samples_params = {'from': 4, 'to': 8}
     classifier = 'KNN'
@@ -233,7 +263,7 @@ def start(features_number):
     predictions = None
 
     if classifier == 'KNN':
-        knn = KNeighborsClassifier(n_neighbors=2)
+        knn = KNeighborsClassifier(n_neighbors=3)
         knn.fit(train_features, train_classes)
         predictions = knn.predict(test_features)
 
@@ -242,15 +272,14 @@ def start(features_number):
         clf.fit(train_features, train_classes)
         predictions = clf.predict(test_features)
 
-
     test_classes = get_classes(class_params, test_samples_params)
     error_prob = get_error_prob(test_classes, predictions, len(test_classes))
 
-    print(features_number, classifier)
+    print(features_number, base_dir, classifier)
     print('True probability: ', 1 - error_prob)
 
-    print('Finish', strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
-
-for features_number in [2, 4, 6, 8]:
-    start(features_number)
+# for base_dir in ['./DB1_B', './DB2_B', './DB3_B', './DB4_B']:
+for base_dir in ['./DB2_B']:
+    for features_number in [ 2 ]:
+        start(features_number, base_dir)
