@@ -45,7 +45,12 @@ def calculate_singularities(im, angles, tolerance, W, im_path):
     singularities = []
 
     raster = ndimage.imread(im_path)
-    center = ndimage.measurements.center_of_mass(raster)
+
+    shape = list(raster.shape)
+
+    center = []
+    center.append(shape[1] / 2)
+    center.append(shape[0] / 2)
 
     for i in range(1, len(angles) - 1):
         for j in range(1, len(angles[i]) - 1):

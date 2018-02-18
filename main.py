@@ -14,7 +14,9 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn import svm
 from scipy import ndimage
 from skimage import exposure, img_as_float
-
+import matplotlib.pyplot as plt
+import scipy.misc
+from skimage.draw import ellipse_perimeter
 
 def get_error_prob(classes, predictions, examples_number):
     assert len(classes) == len(predictions)
@@ -197,48 +199,40 @@ def load_data(base_dir, class_params, samples_params):
 
     vectors = []
 
-    box_size = 30
+    box_size = 150
 
     for folder in folders:
         images = os.listdir(base_dir + '/' + folder)
+        images = [img for img in images if not img.endswith('.txt')]
         images = images[samples_params['from']:samples_params['to']]
-        images = [img for img in images if img.endswith('.tif')]
 
         for image in images:
             im_path = base_dir + '/' + folder + '/' + image
             ext = image[image.rfind('.'):]
-            os.system("python poincare.py " + im_path + " 16 1 --smooth")
-
             file_name = im_path.replace(ext, '.txt')
+            
+            if not os.path.isfile(file_name):
+                os.system("python poincare.py " + im_path + " 16 1 --smooth")
 
             im_file = open(file_name, 'r')
             coordinates = im_file.readline().split(':')
-            y = int(float(coordinates[0]))
             x = int(float(coordinates[1]))
+            y = int(float(coordinates[0]))
             im_file.close()
 
             raster = ndimage.imread(im_path)
 
-            # start = (x - box_size, y - box_size)
-            # end = (x + box_size, y + box_size)
-            # rr, cc = rectangle(start, end, extent=extent, shape=img.shape)
-            # raster[rr, cc] = 1
-
             raster = raster[x - box_size: x + box_size, y - box_size: y + box_size]
-
-            # plt.imshow(np.uint8(raster))
-            # plt.show()
-            #
-            # return
-            #
-
+            
             print(image, x, y, box_size)
             assert raster.size != 0
+            
+            #scaled = scipy.misc.imresize(raster, 0.5)
 
-            img_eq = exposure.equalize_hist(img_as_float(raster))
-            # scaled = scale_matrix(img_eq, 2)
-            vectors.append(image_2_vector(img_eq))
-            misc.imsave("test_" + image + "_" + str(random.random()) + ".tif", raster)
+            #img_eq = exposure.equalize_hist(img_as_float(raster))
+
+            vectors.append(image_2_vector(raster))
+            misc.imsave("./partials/" + image + ".png", raster)
 
             print("Processed image: " + image)
 
@@ -247,8 +241,8 @@ def load_data(base_dir, class_params, samples_params):
 
 def start(features_number, base_dir):
     class_params = {'from': 0, 'to': 4}
-    train_samples_params = {'from': 0, 'to': 4}
-    test_samples_params = {'from': 4, 'to': 8}
+    train_samples_params = {'from': 0, 'to': 10}
+    test_samples_params = {'from': 10, 'to': 15}
     classifier = 'KNN'
 
     train_vectors = load_data(base_dir, class_params, train_samples_params)
@@ -280,6 +274,6 @@ def start(features_number, base_dir):
 
 
 # for base_dir in ['./DB1_B', './DB2_B', './DB3_B', './DB4_B']:
-for base_dir in ['./DB2_B']:
-    for features_number in [ 2 ]:
+for base_dir in ['./DB5_B_SHARPEN']:
+    for features_number in [ 6 ]:
         start(features_number, base_dir)

@@ -1,2 +1,8 @@
 *.vscode
 *.idea
+*__
+*DB5*
+*biometrics-master
+*fingerprints-master
+/partials/**
+*.txt

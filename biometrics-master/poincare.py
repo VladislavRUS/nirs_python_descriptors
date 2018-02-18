@@ -45,7 +45,14 @@ def calculate_singularities(im, angles, tolerance, W, im_path):
     singularities = []
 
     raster = ndimage.imread(im_path)
-    center = ndimage.measurements.center_of_mass(raster)
+
+    shape = list(raster.shape)
+
+    center = []
+    center.append(shape[1] / 2)
+    center.append(shape[0] / 2)
+
+    draw.ellipse([(center[0], center[1]), (center[0] + 10, center[1] + 10)], outline = (0, 0, 0))
 
     for i in range(1, len(angles) - 1):
         for j in range(1, len(angles[i]) - 1):
@@ -72,8 +79,6 @@ def calculate_singularities(im, angles, tolerance, W, im_path):
             min_s = s
 
     dot_idx = im_path.rfind('.')
-    print(im_path)
-    print(im_path[:dot_idx])
     text_file = open(im_path[:dot_idx] + ".txt", "w")
     avg_min_s = avg(min_s)
     text_file.write(str(avg_min_s[0]) + ":" + str(avg_min_s[1]))
@@ -106,7 +111,7 @@ if args.smooth:
     angles = utils.smooth_angles(angles)
 
 result = calculate_singularities(im, angles, int(args.tolerance[0]), W, args.image[0])
-#result.show()
+result.show()
 
 if args.save:
     base_image_name = os.path.splitext(os.path.basename(args.image[0]))[0]
