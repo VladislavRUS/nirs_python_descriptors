@@ -1,6 +1,6 @@
 *.vscode
 *.idea
-*__
+*__*
 *DB5*
 *biometrics-master
 *fingerprints-master

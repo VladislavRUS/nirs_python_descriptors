@@ -199,7 +199,7 @@ def load_data(base_dir, class_params, samples_params):
 
     vectors = []
 
-    box_size = 150
+    box_size = 100
 
     for folder in folders:
         images = os.listdir(base_dir + '/' + folder)
@@ -221,18 +221,25 @@ def load_data(base_dir, class_params, samples_params):
             im_file.close()
 
             raster = ndimage.imread(im_path)
+            raster_shape = list(raster.shape)
+
+            if x - box_size < 0 or x + box_size > raster_shape[1]:
+                x = int(raster_shape[1] / 2)
+
+            if y - box_size < 0 or y + box_size > raster_shape[0]:
+                y = int(raster_shape[0] / 2)
 
             raster = raster[x - box_size: x + box_size, y - box_size: y + box_size]
             
             print(image, x, y, box_size)
             assert raster.size != 0
             
-            #scaled = scipy.misc.imresize(raster, 0.5)
+            scaled = scipy.misc.imresize(raster, 0.75)
 
-            #img_eq = exposure.equalize_hist(img_as_float(raster))
+            img_eq = exposure.equalize_hist(img_as_float(scaled))
 
-            vectors.append(image_2_vector(raster))
-            misc.imsave("./partials/" + image + ".png", raster)
+            vectors.append(image_2_vector(img_eq))
+            misc.imsave("./partials/" + image, img_eq)
 
             print("Processed image: " + image)
 
@@ -275,5 +282,5 @@ def start(features_number, base_dir):
 
 # for base_dir in ['./DB1_B', './DB2_B', './DB3_B', './DB4_B']:
 for base_dir in ['./DB5_B_SHARPEN']:
-    for features_number in [ 6 ]:
+    for features_number in [ 8 ]:
         start(features_number, base_dir)
