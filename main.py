@@ -30,6 +30,20 @@ def get_error_prob(classes, predictions, examples_number):
     return errors / examples_number
 
 
+def get_classes_complex(class_params, samples_params):
+    classes = []
+
+    max_class_idx = class_params['to'] - class_params['from']
+    max_sample_idx = samples_params['to'] - samples_params['from']
+    
+    for i in range(0, max_sample_idx):
+        classes.append(0)
+
+    for i in range(0, max_sample_idx * (max_class_idx - 1)):
+        classes.append(1)
+
+    return classes
+
 def get_classes(class_params, samples_params):
     classes = []
 
@@ -248,10 +262,10 @@ def load_data(base_dir, class_params, samples_params):
 
 def start(features_number, base_dir):
     class_params = {'from': 0, 'to': 4}
-    train_samples_params = {'from': 0, 'to': 10}
-    test_samples_params = {'from': 10, 'to': 15}
+    train_samples_params = {'from': 0, 'to': 6}
+    test_samples_params = {'from': 6, 'to': 8}
     classifier = 'KNN'
-
+    
     train_vectors = load_data(base_dir, class_params, train_samples_params)
     eigen_vectors, vec_mean = pca(train_vectors)
     train_features = apply_pca(train_vectors, eigen_vectors, vec_mean, features_number)
@@ -259,7 +273,8 @@ def start(features_number, base_dir):
     test_vectors = load_data(base_dir, class_params, test_samples_params)
     test_features = apply_pca(test_vectors, eigen_vectors, vec_mean, features_number)
 
-    train_classes = get_classes(class_params, train_samples_params)
+    train_classes = get_classes_complex(class_params, train_samples_params)
+    print(train_classes)
 
     predictions = None
 
@@ -267,13 +282,15 @@ def start(features_number, base_dir):
         knn = KNeighborsClassifier(n_neighbors=3)
         knn.fit(train_features, train_classes)
         predictions = knn.predict(test_features)
+        predictions_proba = knn.predict_proba(test_features)
+        print(predictions_proba)
 
     elif classifier == 'SVM':
         clf = svm.SVC()
         clf.fit(train_features, train_classes)
         predictions = clf.predict(test_features)
 
-    test_classes = get_classes(class_params, test_samples_params)
+    test_classes = get_classes_complex(class_params, test_samples_params)
     error_prob = get_error_prob(test_classes, predictions, len(test_classes))
 
     print(features_number, base_dir, classifier)
@@ -282,5 +299,5 @@ def start(features_number, base_dir):
 
 # for base_dir in ['./DB1_B', './DB2_B', './DB3_B', './DB4_B']:
 for base_dir in ['./DB5_B_SHARPEN']:
-    for features_number in [ 8 ]:
+    for features_number in [ 4 ]:
         start(features_number, base_dir)
